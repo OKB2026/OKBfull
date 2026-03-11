@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#0f172a">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OKB Quiz Trainer</title>
+
+<style>
+body{
+font-family:Arial;
+background:#eef2f7;
+display:flex;
+justify-content:center;
+margin:0;
+}
+
+#app{
+background:white;
+padding:20px;
+margin:20px;
+border-radius:10px;
+max-width:700px;
+width:100%;
+box-shadow:0 10px 25px rgba(0,0,0,.2);
+}
+
+button{
+padding:10px;
+margin:5px 0;
+width:100%;
+border:none;
+border-radius:8px;
+background:#2563eb;
+color:white;
+font-size:16px;
+}
+
+.option{
+display:block;
+margin:8px 0;
+}
+
+#top{
+display:flex;
+justify-content:space-between;
+margin-bottom:10px;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+<h2>OKB Exam Trainer</h2>
+<button onclick="startPractice()">Practice Mistakes</button>
+<button onclick="startStudy()">Study Mode</button>
+<button onclick="startExam()">Exam Mode (40)</button>
+
+<div id="top">
+<div id="progress"></div>
+<div id="score"></div>
+<div id="timer"></div>
+</div>
+
+<div id="question"></div>
+<div id="options"></div>
+
+<button onclick="submitAnswer()">Submit</button>
+<button onclick="nextQuestion()">Next</button>
+<button onclick="prevQuestion()">Previous</button>
+
+
+<div id="result"></div>
+
+</div>
+
+<script>
+
+// ======================
+// QUESTION BANK
+// ======================
+
+const questions = [
+{
+id:1,
+question:"Pasażer może wnieść do stref zastrzeżonych lotniska lub na pokład statku powietrznego przedmioty zabronione pod warunkiem że:",
+options:[
+"odpowiedni organ wyrazi zgodę na przewóz danego przedmiotu",
+"pasażer przeszedł sprawdzenie przeszłości",
+"pasażerowi towarzyszy uzbrojona eskorta",
+"przewoźnik lotniczy został poinformowany o pasażerze i przewożonym przedmiocie",
+"spełnione są mające zastosowanie zasady ochrony lotnictwa"
+],
+answer:[3,4]
+},
+
+{
+id:2,
+question:"Podczas kontroli bezpieczeństwa osób ręczny wykrywacz metali:",
+options:[
+"jest podstawowym środkiem kontroli bezpieczeństwa",
+"jest pomocny przy ustalaniu miejsca ukrycia materiałów wybuchowych",
+"można stosować tylko jako dodatkowy środek kontroli bezpieczeństwa",
+"można stosować zamiast kontroli manualnej",
+"nie zastępuje wymogów kontroli manualnej",
+"stosowany jest wyłącznie do kontroli osób z ograniczoną możliwością poruszania się"
+],
+answer:[2,4]
+},
+
+{
+id:3,
+question:"Wskaż kategorie pasażerów zwolnionych z kontroli bezpieczeństwa:",
+options:[
+"funkcjonariusze SOP wykonujący czynności ochronne",
+"osoby konwojowane pod uzbrojoną eskortą",
+"personel misji dyplomatycznych",
+"wicemarszałkowie Senatu"
+],
+answer:[0]
+},
+
+{
+id:4,
+question:"Kontrolę bezpieczeństwa pasażera potencjalnie uciążliwego przeprowadza się za pomocą:",
+options:[
+"kontroli manualnej",
+"psów do wykrywania materiałów wybuchowych",
+"ręcznego wykrywacza metali",
+"urządzenia rentgenowskiego"
+],
+answer:[0,1]
+},
+
+{
+id:5,
+question:"Sprzęt ułatwiający podróżowanie osobom z ograniczoną możliwością poruszania się:",
+options:[
+"poddaje się kontroli wzrokowej",
+"poddaje się w miarę możliwości kontroli bezpieczeństwa jako bagaż kabinowy",
+"zwolniony jest z kontroli bezpieczeństwa za zgodą przewoźnika",
+"zwolniony jest z kontroli bezpieczeństwa"
+],
+answer:[1]
+},
+
+{
+id:6,
+question:"Wskaż osoby niebędące pasażerami zwolnione z kontroli bezpieczeństwa:",
+options:[
+"funkcjonariusze Izby Skarbowej",
+"funkcjonariusze Służby Kontrwywiadu Wojskowego",
+"funkcjonariusze wykonujący zadania ochronne na pokładach statków powietrznych",
+"pracownicy ULC wykonujący zadania służbowe",
+"pracownicy i funkcjonariusze ABW"
+],
+answer:[2]
+},
+
+{
+id:7,
+question:"Funkcjonariusze Straży Granicznej, Służby Celno-Skarbowej i SOP mogą wejść do strefy zastrzeżonej lotniska na podstawie legitymacji służbowej jeżeli są eskortowani przez osobę posiadającą:",
+options:[
+"certyfikat inspektora lotnictwa cywilnego",
+"czasową kartę identyfikacyjną portu lotniczego",
+"odpowiednik karty pokładowej",
+"ważną kartę identyfikacyjną członka załogi"
+],
+answer:[0]
+},
+
+{
+id:8,
+question:"Czasowa karta identyfikacyjna portu lotniczego dla funkcjonariuszy zawiera:",
+options:[
+"datę wydania",
+"nazwisko funkcjonariusza",
+"numer PESEL",
+"numer służbowy funkcjonariusza",
+"oznaczenia stref do których funkcjonariusz ma dostęp"
+],
+answer:[1,3,4]
+},
+
+{
+id:9,
+question:"Kartę identyfikacyjną portu lotniczego zwraca się niezwłocznie podmiotowi wydającemu:",
+options:[
+"w momencie opuszczania kraju na ponad 2 tygodnie",
+"w momencie unieważnienia karty",
+"w momencie zmiany pracodawcy",
+"w przypadku zwolnienia lekarskiego ponad 14 dni",
+"w razie zmiany potrzeby dostępu do stref"
+],
+answer:[1,2]
+},
+
+{
+id:10,
+question:"Osoby niebędące pasażerami poddaje się kontroli bezpieczeństwa za pomocą:",
+options:[
+"kontroli wzrokowej",
+"ręcznego wykrywacza metali",
+"urządzeń do wykrywania śladowych ilości materiałów wybuchowych z ręcznymi wykrywaczami",
+"urządzeń do wykrywania śladowych ilości materiałów wybuchowych"
+],
+answer:[2,3]
+},
+{
+id:11,
+question:"Funkcjonariusze Straży Granicznej mogą wejść do strefy zastrzeżonej lotniska:",
+options:[
+"wyłącznie z kartą pokładową",
+"na podstawie ważnej legitymacji służbowej oraz karty identyfikacyjnej portu lotniczego",
+"wyłącznie po przejściu kontroli bezpieczeństwa",
+"na podstawie ważnej legitymacji służbowej podczas wykonywania obowiązków służbowych"
+],
+answer:[3]
+},
+
+{
+id:12,
+question:"Czasowa karta identyfikacyjna portu lotniczego uprawnia:",
+options:[
+"do wejścia do wszystkich stref lotniska",
+"do wejścia tylko do stref określonych na karcie",
+"do wejścia wyłącznie na pokład statku powietrznego",
+"do przejścia kontroli granicznej"
+],
+answer:[1]
+},
+
+{
+id:13,
+question:"Osoby posiadające kartę identyfikacyjną portu lotniczego powinny:",
+options:[
+"nosić ją w widocznym miejscu",
+"przechowywać ją w torbie",
+"pokazywać ją wyłącznie na żądanie przełożonego",
+"przekazywać ją innym pracownikom"
+],
+answer:[0]
+},
+
+{
+id:14,
+question:"Kontrola bezpieczeństwa osób może obejmować:",
+options:[
+"kontrolę manualną",
+"prześwietlenie rentgenowskie",
+"sprawdzenie dokumentów",
+"kontrolę przy użyciu bramki do wykrywania metali"
+],
+answer:[0,3]
+},
+
+{
+id:15,
+question:"Bagaż kabinowy poddaje się kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"wyłącznie przy lotach międzynarodowych",
+"tylko w przypadku podejrzenia zagrożenia",
+"po wejściu na pokład statku powietrznego"
+],
+answer:[0]
+},
+
+{
+id:16,
+question:"Podczas kontroli bezpieczeństwa bagażu kabinowego stosuje się:",
+options:[
+"urządzenia rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"systemy wykrywania materiałów wybuchowych"
+],
+answer:[0,1,3]
+},
+
+{
+id:17,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"mogą zostać zwrócone pasażerowi",
+"powinny zostać zatrzymane przez służby ochrony",
+"mogą zostać przekazane innemu pasażerowi",
+"mogą zostać wniesione na pokład za zgodą pilota"
+],
+answer:[1]
+},
+
+{
+id:18,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"przy użyciu urządzeń technicznych",
+"wyłącznie manualnie",
+"z użyciem psów do wykrywania materiałów wybuchowych",
+"bez udziału personelu ochrony"
+],
+answer:[0,2]
+},
+
+{
+id:19,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"może wejść do strefy zastrzeżonej",
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może wejść na pokład statku powietrznego",
+"może ominąć kontrolę po podpisaniu oświadczenia"
+],
+answer:[1]
+},
+
+{
+id:20,
+question:"Kontrola bezpieczeństwa pasażerów ma na celu:",
+options:[
+"zapobieganie wniesieniu przedmiotów zabronionych",
+"sprawdzenie dokumentów podróży",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"sprawdzenie rezerwacji lotu"
+],
+answer:[0,2]
+},
+{
+id:21,
+question:"Kontrola bezpieczeństwa pasażerów jest przeprowadzana w celu:",
+options:[
+"zapobiegania aktom bezprawnej ingerencji",
+"kontroli dokumentów podróży",
+"sprawdzenia rezerwacji lotu",
+"zapewnienia bezpieczeństwa lotnictwa cywilnego"
+],
+answer:[0,3]
+},
+
+{
+id:22,
+question:"Kontrola bezpieczeństwa pasażerów może obejmować:",
+options:[
+"kontrolę manualną",
+"kontrolę przy użyciu bramki do wykrywania metali",
+"kontrolę przy użyciu urządzeń rentgenowskich",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:23,
+question:"Podczas kontroli bezpieczeństwa bagażu kabinowego stosuje się:",
+options:[
+"urządzenia rentgenowskie",
+"kontrolę manualną",
+"systemy wykrywania materiałów wybuchowych",
+"kontrolę wzrokową"
+],
+answer:[0,1,2]
+},
+
+{
+id:24,
+question:"Kontrola manualna pasażera polega na:",
+options:[
+"sprawdzeniu odzieży i przedmiotów znajdujących się przy osobie",
+"prześwietleniu ciała pasażera",
+"sprawdzeniu dokumentów podróży",
+"przeprowadzeniu kontroli przy użyciu bramki"
+],
+answer:[0]
+},
+
+{
+id:25,
+question:"Jeżeli podczas kontroli bezpieczeństwa wykryto przedmiot zabroniony:",
+options:[
+"pasażer może go zabrać na pokład statku powietrznego",
+"przedmiot powinien zostać zatrzymany przez służby ochrony",
+"pasażer może go przekazać innemu pasażerowi",
+"przedmiot zostaje zignorowany"
+],
+answer:[1]
+},
+
+{
+id:26,
+question:"Kontrola bezpieczeństwa bagażu rejestrowanego może być przeprowadzona przy użyciu:",
+options:[
+"urządzeń rentgenowskich",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"bramki do wykrywania metali"
+],
+answer:[0,1,2]
+},
+
+{
+id:27,
+question:"Przedmioty zabronione w bagażu kabinowym to między innymi:",
+options:[
+"broń palna",
+"materiały wybuchowe",
+"noże o dużej długości ostrza",
+"telefon komórkowy"
+],
+answer:[0,1,2]
+},
+
+{
+id:28,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"może wejść do strefy zastrzeżonej",
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może wejść na pokład statku powietrznego",
+"może ominąć kontrolę"
+],
+answer:[1]
+},
+
+{
+id:29,
+question:"Kontrola bezpieczeństwa może być przeprowadzona przy użyciu:",
+options:[
+"psów do wykrywania materiałów wybuchowych",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"sprawdzenia rezerwacji lotu"
+],
+answer:[0,1,2]
+},
+
+{
+id:30,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"wyłącznie podczas lotów międzynarodowych",
+"tylko na żądanie pasażera",
+"tylko podczas lotów krajowych"
+],
+answer:[0]
+},
+
+{
+id:31,
+question:"Podczas kontroli bezpieczeństwa pasażer powinien:",
+options:[
+"stosować się do poleceń personelu kontroli bezpieczeństwa",
+"odmówić kontroli",
+"zignorować polecenia funkcjonariuszy",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:32,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony lotnictwa",
+"pasażerów",
+"pracowników linii lotniczych bez uprawnień",
+"osoby postronne"
+],
+answer:[0]
+},
+
+{
+id:33,
+question:"W przypadku alarmu podczas kontroli bezpieczeństwa:",
+options:[
+"przeprowadza się dodatkową kontrolę",
+"pasażer jest automatycznie wpuszczany",
+"kontrola zostaje zakończona",
+"alarm jest ignorowany"
+],
+answer:[0]
+},
+
+{
+id:34,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"sprawdzenie dokumentów podróży",
+"kontrolę wzrokową"
+],
+answer:[0,1]
+},
+
+{
+id:35,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"kontroli dokumentów podróży",
+"kontroli rezerwacji lotu",
+"sprawdzania biletów"
+],
+answer:[0]
+},
+
+{
+id:36,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych z bagażu",
+"okazanie dokumentu tożsamości",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:37,
+question:"Kontrola bezpieczeństwa ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa pasażerów",
+"kontrolę cen biletów",
+"sprawdzenie rezerwacji lotu"
+],
+answer:[0,1]
+},
+
+{
+id:38,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:39,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"z użyciem urządzeń technicznych",
+"bez udziału personelu",
+"bez sprawdzenia bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:40,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"sprawdzenie dokumentów podróży",
+"kontrola cen biletów"
+],
+answer:[0,1]
+},
+{
+id:41,
+question:"Kontrola bezpieczeństwa bagażu rejestrowanego może obejmować:",
+options:[
+"urządzenia rentgenowskie",
+"systemy wykrywania materiałów wybuchowych",
+"kontrolę manualną",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1,2]
+},
+
+{
+id:42,
+question:"Kontrola bezpieczeństwa pasażerów odbywa się:",
+options:[
+"przed wejściem do strefy zastrzeżonej lotniska",
+"po wejściu na pokład statku powietrznego",
+"po zakończeniu lotu",
+"wyłącznie podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+
+{
+id:43,
+question:"Przedmioty zabronione w bagażu kabinowym to między innymi:",
+options:[
+"materiały wybuchowe",
+"broń palna",
+"duże noże",
+"telefon komórkowy"
+],
+answer:[0,1,2]
+},
+
+{
+id:44,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"sprawdzania rezerwacji lotów",
+"kontroli biletów"
+],
+answer:[0]
+},
+
+{
+id:45,
+question:"Kontrola manualna polega na:",
+options:[
+"sprawdzeniu odzieży i przedmiotów znajdujących się przy osobie",
+"prześwietleniu bagażu",
+"sprawdzeniu dokumentów",
+"sprawdzeniu rezerwacji"
+],
+answer:[0]
+},
+
+{
+id:46,
+question:"Pasażer podczas kontroli bezpieczeństwa powinien:",
+options:[
+"stosować się do poleceń personelu",
+"ignorować polecenia funkcjonariuszy",
+"odmówić kontroli",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:47,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"może wejść na pokład statku powietrznego",
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może ominąć kontrolę",
+"może wejść na pokład po podpisaniu oświadczenia"
+],
+answer:[1]
+},
+
+{
+id:48,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:49,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"przy użyciu urządzeń technicznych",
+"bez udziału personelu ochrony",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:50,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrola cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+{
+id:51,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"przed wejściem do strefy zastrzeżonej",
+"tylko podczas lotów międzynarodowych",
+"tylko podczas lotów krajowych",
+"po zakończeniu lotu"
+],
+answer:[0]
+},
+
+{
+id:52,
+question:"Kontrola bezpieczeństwa bagażu może obejmować:",
+options:[
+"urządzenia rentgenowskie",
+"kontrolę manualną",
+"systemy wykrywania materiałów wybuchowych",
+"kontrolę wzrokową"
+],
+answer:[0,1,2]
+},
+
+{
+id:53,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:54,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony lotnictwa",
+"pasażerów",
+"osoby postronne",
+"pracowników lotniska bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:55,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych z bagażu",
+"okazanie dokumentu tożsamości",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:56,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania biletów",
+"kontroli dokumentów podróży",
+"sprawdzania rezerwacji"
+],
+answer:[0]
+},
+
+{
+id:57,
+question:"Kontrola bezpieczeństwa może być przeprowadzona przy użyciu:",
+options:[
+"psów do wykrywania materiałów wybuchowych",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"sprawdzenia rezerwacji"
+],
+answer:[0,1,2]
+},
+
+{
+id:58,
+question:"Bagaż kabinowy przed kontrolą bezpieczeństwa powinien:",
+options:[
+"zostać umieszczony na taśmie urządzenia rentgenowskiego",
+"zostać przekazany innemu pasażerowi",
+"zostać pozostawiony bez kontroli",
+"zostać pozostawiony w samolocie"
+],
+answer:[0]
+},
+
+{
+id:59,
+question:"Kontrola bezpieczeństwa pasażerów jest przeprowadzana:",
+options:[
+"przed wejściem do strefy zastrzeżonej",
+"po wejściu na pokład samolotu",
+"po zakończeniu lotu",
+"wyłącznie podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+
+{
+id:60,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrola cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+{
+id:61,
+question:"Kontrola bezpieczeństwa bagażu rejestrowanego może być przeprowadzona przy użyciu:",
+options:[
+"urządzeń rentgenowskich",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"bramki do wykrywania metali"
+],
+answer:[0,1,2]
+},
+
+{
+id:62,
+question:"Podczas kontroli bezpieczeństwa pasażer powinien:",
+options:[
+"stosować się do poleceń personelu",
+"ignorować polecenia",
+"odmówić kontroli",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:63,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:64,
+question:"Systemy wykrywania materiałów wybuchowych stosuje się w celu:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"sprawdzania rezerwacji",
+"kontroli cen biletów"
+],
+answer:[0]
+},
+
+{
+id:65,
+question:"Kontrola manualna polega na:",
+options:[
+"sprawdzeniu odzieży i przedmiotów przy osobie",
+"prześwietleniu bagażu",
+"sprawdzeniu dokumentów",
+"sprawdzeniu biletów"
+],
+answer:[0]
+},
+
+{
+id:66,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:67,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony",
+"pasażerów",
+"osoby postronne",
+"pracowników bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:68,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"z użyciem urządzeń technicznych",
+"bez udziału personelu",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:69,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych",
+"okazanie dokumentu",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:70,
+question:"Kontrola bezpieczeństwa bagażu kabinowego ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrolę cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+
+{
+id:71,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"tylko podczas lotów międzynarodowych",
+"tylko podczas lotów krajowych",
+"po zakończeniu lotu"
+],
+answer:[0]
+},
+
+{
+id:72,
+question:"Kontrola bezpieczeństwa może obejmować:",
+options:[
+"kontrolę manualną",
+"urządzenia techniczne",
+"psy do wykrywania materiałów wybuchowych",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1,2]
+},
+
+{
+id:73,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:74,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"sprawdzenie rezerwacji",
+"kontrola cen biletów"
+],
+answer:[0,1]
+},
+{
+id:75,
+question:"Wskaż osoby niebędące pasażerami, które są zwolnione z kontroli bezpieczeństwa:",
+options:[
+"funkcjonariusze Izby Skarbowej po okazaniu ważnej legitymacji służbowej",
+"funkcjonariusze pełniący służbę w ramach Europejskiej Agencji Straży Granicznej i Przybrzeżnej posiadający ważną kartę identyfikacyjną portu lotniczego podczas wykonywania zadań i obowiązków służbowych na lotnisku",
+"funkcjonariusze Służby Kontrwywiadu Wojskowego po okazaniu ważnej legitymacji służbowej",
+"osoba posiadająca legitymację służbową wydaną przez Urząd Lotnictwa Cywilnego podczas wykonywania zadań i obowiązków służbowych na lotnisku",
+"pracownicy i funkcjonariusze Służby Ochrony Państwa i żołnierze wyznaczeni na stanowisko służbowe w SKW posiadający ważną kartę identyfikacyjną portu lotniczego"
+],
+answer:[1]
+},
+
+{
+id:76,
+question:"Następujące przedmioty uznaje się za przedmioty zabronione w przesyłkach zawierających ładunek i pocztę:",
+options:[
+"wiertarki i wiertła, w tym bezprzewodowe przenośne wiertarki elektryczne",
+"zabawki w kształcie broni, repliki i imitacje broni palnej",
+"zmontowane urządzenia wybuchowe i zapalające, które nie są przewożone zgodnie z zasadami bezpieczeństwa w lotnictwie cywilnym"
+],
+answer:[2]
+},
+
+{
+id:77,
+question:"Kontrolę bezpieczeństwa pasażera potencjalnie uciążliwego przeprowadza się za pomocą:",
+options:[
+"bramki do wykrywania metali",
+"eskortowany pasażer potencjalnie uciążliwy jest zwolniony z kontroli bezpieczeństwa",
+"kontroli manualnej",
+"urządzeń do wykrywania substancji narkotycznych"
+],
+answer:[0,2]
+},
+
+{
+id:78,
+question:"Wskaż kategorie pasażerów zwolnionych z kontroli bezpieczeństwa:",
+options:[
+"osoby konwojowane pod uzbrojoną eskortą",
+"osoby którym towarzyszy ochrona służb państwowych",
+"personel misji dyplomatycznych",
+"wicemarszałkowie Senatu"
+],
+answer:[1]
+},
+
+{
+id:79,
+question:"Kontrolę manualną osób przeprowadza się:",
+options:[
+"w taki sposób, aby upewnić się, na ile to możliwe, że kontrolowana osoba nie przenosi przedmiotów zabronionych",
+"wyłącznie w przypadku awarii bramki do wykrywania metali",
+"wyłącznie w stosunku do mężczyzn"
+],
+answer:[0]
+},
+
+{
+id:80,
+question:"Jeżeli dozwolone jest przewożenie w kabinie pasażerskiej statku powietrznego żywego zwierzęcia:",
+options:[
+"jest ono poddawane takiej samej kontroli bezpieczeństwa jak pasażer lub bagaż kabinowy",
+"nie podlega ono kontroli bezpieczeństwa",
+"podlega ono kontroli bezpieczeństwa przeprowadzonej wyłącznie przez weterynarza"
+],
+answer:[0]
+},
+
+{
+id:81,
+question:"Ładunek i poczta, którym nadano oznaczenie „KC” oznacza przesyłkę otrzymaną od:",
+options:[
+"uznanego dostawcy",
+"zarejestrowanego agenta",
+"znanego dostawcy z portu lotniczego państwa trzeciego"
+],
+answer:[0]
+},
+
+{
+id:82,
+question:"Przed kontrolą bezpieczeństwa bagażu kabinowego przenośne komputery i inne duże urządzenia elektryczne:",
+options:[
+"muszą zostać obowiązkowo skontrolowane z wykorzystaniem psów do wykrywania materiałów wybuchowych",
+"muszą zostać włączone, aby sprawdzić czy działają",
+"usuwa się z bagażu i poddaje kontroli bezpieczeństwa oddzielnie"
+],
+answer:[2]
+},
+{
+id:83,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby ochrony",
+"mogą zostać wniesione na pokład statku powietrznego",
+"mogą zostać przekazane innemu pasażerowi",
+"powinny zostać zignorowane"
+],
+answer:[0]
+},
+
+{
+id:84,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:85,
+question:"Systemy wykrywania materiałów wybuchowych stosuje się w celu:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"sprawdzania rezerwacji lotów",
+"kontroli cen biletów"
+],
+answer:[0]
+},
+
+{
+id:86,
+question:"Kontrola bezpieczeństwa pasażerów odbywa się:",
+options:[
+"przed wejściem do strefy zastrzeżonej lotniska",
+"po wejściu na pokład statku powietrznego",
+"po zakończeniu lotu",
+"wyłącznie podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+
+{
+id:87,
+question:"Podczas kontroli bezpieczeństwa pasażer powinien:",
+options:[
+"stosować się do poleceń personelu kontroli bezpieczeństwa",
+"ignorować polecenia funkcjonariuszy",
+"odmówić kontroli",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:88,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"tylko podczas lotów międzynarodowych",
+"tylko podczas lotów krajowych",
+"po zakończeniu lotu"
+],
+answer:[0]
+},
+
+{
+id:89,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"przy użyciu urządzeń technicznych",
+"bez udziału personelu ochrony",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:90,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrola cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+{
+id:91,
+question:"Kontrola bezpieczeństwa bagażu rejestrowanego może obejmować:",
+options:[
+"urządzenia rentgenowskie",
+"systemy wykrywania materiałów wybuchowych",
+"kontrolę manualną",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1,2]
+},
+
+{
+id:92,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych z bagażu",
+"okazanie dokumentu tożsamości",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:93,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:94,
+question:"Przedmioty zabronione w bagażu kabinowym to między innymi:",
+options:[
+"broń palna",
+"materiały wybuchowe",
+"duże noże",
+"telefon komórkowy"
+],
+answer:[0,1,2]
+},
+
+{
+id:95,
+question:"Kontrola bezpieczeństwa może być przeprowadzona przy użyciu:",
+options:[
+"psów do wykrywania materiałów wybuchowych",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"sprawdzenia rezerwacji lotu"
+],
+answer:[0,1,2]
+},
+
+{
+id:96,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"może wejść do strefy zastrzeżonej",
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może wejść na pokład statku powietrznego",
+"może ominąć kontrolę"
+],
+answer:[1]
+},
+
+{
+id:97,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony lotnictwa",
+"pasażerów",
+"osoby postronne",
+"pracowników lotniska bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:98,
+question:"Kontrola bezpieczeństwa ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa pasażerów",
+"kontrolę cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+
+{
+id:99,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"kontroli biletów",
+"sprawdzania rezerwacji"
+],
+answer:[0]
+},
+
+{
+id:100,
+question:"Kontrola bezpieczeństwa może obejmować:",
+options:[
+"kontrolę manualną",
+"urządzenia techniczne",
+"psy do wykrywania materiałów wybuchowych",
+"sprawdzenie rezerwacji lotu"
+],
+answer:[0,1,2]
+},
+{
+id:101,
+question:"Kontrola bezpieczeństwa bagażu kabinowego ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"sprawdzenie dokumentów podróży",
+"kontrolę cen biletów"
+],
+answer:[0,1]
+},
+
+{
+id:102,
+question:"Kontrola bezpieczeństwa pasażerów odbywa się:",
+options:[
+"przed wejściem do strefy zastrzeżonej lotniska",
+"po wejściu na pokład statku powietrznego",
+"po zakończeniu lotu",
+"wyłącznie podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+
+{
+id:103,
+question:"Podczas kontroli bezpieczeństwa pasażer powinien:",
+options:[
+"stosować się do poleceń personelu kontroli bezpieczeństwa",
+"ignorować polecenia funkcjonariuszy",
+"odmówić kontroli",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:104,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"przy użyciu urządzeń technicznych",
+"bez udziału personelu ochrony",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:105,
+question:"Systemy wykrywania materiałów wybuchowych stosuje się w celu:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"sprawdzania rezerwacji lotu",
+"kontroli cen biletów"
+],
+answer:[0]
+},
+
+{
+id:106,
+question:"Przedmioty zabronione w bagażu kabinowym to między innymi:",
+options:[
+"broń palna",
+"materiały wybuchowe",
+"duże noże",
+"telefon komórkowy"
+],
+answer:[0,1,2]
+},
+
+{
+id:107,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony lotnictwa",
+"pasażerów",
+"osoby postronne",
+"pracowników lotniska bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:108,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"może wejść do strefy zastrzeżonej",
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może wejść na pokład statku powietrznego",
+"może ominąć kontrolę"
+],
+answer:[1]
+},
+
+{
+id:109,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:110,
+question:"Kontrola bezpieczeństwa może być przeprowadzona przy użyciu:",
+options:[
+"psów do wykrywania materiałów wybuchowych",
+"systemów wykrywania materiałów wybuchowych",
+"kontroli manualnej",
+"sprawdzenia rezerwacji lotu"
+],
+answer:[0,1,2]
+},
+{
+id:111,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"tylko podczas lotów międzynarodowych",
+"tylko podczas lotów krajowych",
+"po zakończeniu lotu"
+],
+answer:[0]
+},
+
+{
+id:112,
+question:"Kontrola bezpieczeństwa pasażerów ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"sprawdzenie dokumentów podróży",
+"kontrolę cen biletów"
+],
+answer:[0,1]
+},
+
+{
+id:113,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych z bagażu",
+"okazanie dokumentu tożsamości",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:114,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"sprawdzania rezerwacji lotów",
+"kontroli biletów"
+],
+answer:[0]
+},
+
+{
+id:115,
+question:"Kontrola bezpieczeństwa może obejmować:",
+options:[
+"kontrolę manualną",
+"urządzenia techniczne",
+"psy do wykrywania materiałów wybuchowych",
+"sprawdzenie rezerwacji lotu"
+],
+answer:[0,1,2]
+},
+
+{
+id:116,
+question:"Kontrola manualna polega na:",
+options:[
+"sprawdzeniu odzieży i przedmiotów przy osobie",
+"prześwietleniu bagażu",
+"sprawdzeniu dokumentów",
+"sprawdzeniu biletów"
+],
+answer:[0]
+},
+
+{
+id:117,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:118,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony",
+"pasażerów",
+"osoby postronne",
+"pracowników bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:119,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:120,
+question:"Celem kontroli bezpieczeństwa jest:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrola cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+{
+id:121,
+question:"Kontrola bezpieczeństwa bagażu rejestrowanego może obejmować:",
+options:[
+"urządzenia rentgenowskie",
+"systemy wykrywania materiałów wybuchowych",
+"kontrolę manualną",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1,2]
+},
+
+{
+id:122,
+question:"Podczas kontroli bezpieczeństwa pasażer powinien:",
+options:[
+"stosować się do poleceń personelu",
+"ignorować polecenia",
+"odmówić kontroli",
+"przekazać bagaż innemu pasażerowi"
+],
+answer:[0]
+},
+
+{
+id:123,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"z użyciem urządzeń technicznych",
+"bez udziału personelu",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:124,
+question:"Systemy wykrywania materiałów wybuchowych stosuje się w celu:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów podróży",
+"kontroli biletów",
+"sprawdzania rezerwacji"
+],
+answer:[0]
+},
+
+{
+id:125,
+question:"Bagaż kabinowy przed kontrolą bezpieczeństwa powinien:",
+options:[
+"zostać umieszczony na taśmie urządzenia rentgenowskiego",
+"zostać przekazany innemu pasażerowi",
+"zostać pozostawiony bez kontroli",
+"zostać pozostawiony w samolocie"
+],
+answer:[0]
+},
+
+{
+id:126,
+question:"Kontrola bezpieczeństwa pasażerów odbywa się:",
+options:[
+"przed wejściem do strefy zastrzeżonej",
+"po wejściu na pokład",
+"po zakończeniu lotu",
+"tylko podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+
+{
+id:127,
+question:"Kontrola bezpieczeństwa ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa pasażerów",
+"kontrolę cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+
+{
+id:128,
+question:"Przedmioty zabronione w bagażu kabinowym to między innymi:",
+options:[
+"broń palna",
+"materiały wybuchowe",
+"duże noże",
+"telefon komórkowy"
+],
+answer:[0,1,2]
+},
+
+{
+id:129,
+question:"Kontrola bezpieczeństwa może obejmować:",
+options:[
+"kontrolę manualną",
+"urządzenia techniczne",
+"psy do wykrywania materiałów wybuchowych",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1,2]
+},
+
+{
+id:130,
+question:"Osoba odmawiająca kontroli bezpieczeństwa:",
+options:[
+"nie może zostać wpuszczona do strefy zastrzeżonej",
+"może wejść na pokład",
+"może ominąć kontrolę",
+"może wejść po podpisaniu oświadczenia"
+],
+answer:[0]
+},
+
+{
+id:131,
+question:"Kontrola bezpieczeństwa jest przeprowadzana przez:",
+options:[
+"uprawniony personel ochrony lotnictwa",
+"pasażerów",
+"osoby postronne",
+"pracowników bez uprawnień"
+],
+answer:[0]
+},
+
+{
+id:132,
+question:"Podczas kontroli bezpieczeństwa pasażer może zostać poproszony o:",
+options:[
+"zdjęcie okrycia wierzchniego",
+"wyjęcie urządzeń elektronicznych",
+"okazanie dokumentu",
+"przekazanie bagażu innemu pasażerowi"
+],
+answer:[0,1]
+},
+
+{
+id:133,
+question:"Kontrola bezpieczeństwa bagażu kabinowego obejmuje:",
+options:[
+"prześwietlenie rentgenowskie",
+"kontrolę manualną",
+"kontrolę wzrokową",
+"sprawdzenie dokumentów podróży"
+],
+answer:[0,1]
+},
+
+{
+id:134,
+question:"Systemy wykrywania materiałów wybuchowych służą do:",
+options:[
+"wykrywania materiałów wybuchowych",
+"sprawdzania dokumentów",
+"kontroli biletów",
+"sprawdzania rezerwacji"
+],
+answer:[0]
+},
+
+{
+id:135,
+question:"Kontrola manualna polega na:",
+options:[
+"sprawdzeniu odzieży i przedmiotów przy osobie",
+"prześwietleniu bagażu",
+"sprawdzeniu dokumentów",
+"sprawdzeniu biletów"
+],
+answer:[0]
+},
+
+{
+id:136,
+question:"Przedmioty zabronione znalezione podczas kontroli bezpieczeństwa:",
+options:[
+"powinny zostać zatrzymane przez służby",
+"mogą zostać wniesione na pokład",
+"mogą zostać przekazane innemu pasażerowi",
+"zostają zignorowane"
+],
+answer:[0]
+},
+
+{
+id:137,
+question:"Kontrola bezpieczeństwa może być przeprowadzona:",
+options:[
+"manualnie",
+"z użyciem urządzeń technicznych",
+"bez udziału personelu",
+"bez kontroli bagażu"
+],
+answer:[0,1]
+},
+
+{
+id:138,
+question:"Kontrola bezpieczeństwa ma na celu:",
+options:[
+"zapobieganie aktom bezprawnej ingerencji",
+"zapewnienie bezpieczeństwa lotnictwa cywilnego",
+"kontrolę cen biletów",
+"sprawdzenie rezerwacji"
+],
+answer:[0,1]
+},
+
+{
+id:139,
+question:"Bagaż kabinowy podlega kontroli bezpieczeństwa:",
+options:[
+"zawsze przed wejściem do strefy zastrzeżonej",
+"tylko podczas lotów międzynarodowych",
+"tylko podczas lotów krajowych",
+"po zakończeniu lotu"
+],
+answer:[0]
+},
+
+{
+id:140,
+question:"Kontrola bezpieczeństwa pasażerów odbywa się:",
+options:[
+"przed wejściem do strefy zastrzeżonej",
+"po wejściu na pokład",
+"po zakończeniu lotu",
+"tylko podczas lotów międzynarodowych"
+],
+answer:[0]
+},
+{
+id:141,
+question:"Ładunek i poczta poddawane są kontroli bezpieczeństwa z zastosowaniem co najmniej jednej z poniższych metod:",
+options:[
+"kontrola wzrokowa",
+"psy do wykrywania materiałów wybuchowych",
+"sprawdzenie przeszłości nadawcy przesyłki",
+"systemy do wykrywania urządzeń wybuchowych",
+"urządzenia do wykrywania śladowych ilości materiałów wybuchowych"
+],
+answer:[1,3]
+},
+
+{
+id:142,
+question:"Na lotniskach, na których funkcjonują lotnicze przejścia graniczne, formalności związane z przewozem broni i amunicji statkiem powietrznym dokonuje:",
+options:[
+"przewoźnik lotniczy",
+"Służba Celno-Skarbowa",
+"służba ochrony lotniska",
+"Straż Graniczna"
+],
+answer:[3]
+},
+
+{
+id:143,
+question:"Ręczny wykrywacz metali:",
+options:[
+"jest używany jako podstawowa metoda kontroli bezpieczeństwa osób",
+"jest w stanie wykryć metalowe przedmioty żelazne i nieżelazne",
+"jest w stanie wykryć przedmioty plastikowe",
+"posiada wskaźnik wizualny sygnalizujący, że urządzenie funkcjonuje"
+],
+answer:[1,3]
+},
+
+{
+id:144,
+question:"Podczas kontroli bezpieczeństwa zaopatrzenia portu lotniczego stosuje się pojedynczo następujące środki lub metody kontroli:",
+options:[
+"kontrolę manualną",
+"kontrolę wzrokową",
+"psy do wykrywania materiałów wybuchowych w połączeniu z kontrolą przy użyciu urządzenia rentgenowskiego",
+"systemy do wykrywania urządzeń wybuchowych",
+"urządzenia do wykrywania metali"
+],
+answer:[0,1]
+},
+
+{
+id:145,
+question:"Osoby niebędące pasażerami poddaje się kontroli bezpieczeństwa za pomocą:",
+options:[
+"kontroli wzrokowej",
+"ręcznego wykrywacza metali",
+"urządzenia do wykrywania śladowych ilości materiałów wybuchowych w połączeniu z ręcznymi wykrywaczami metali",
+"urządzeń do wykrywania śladowych ilości materiałów wybuchowych"
+],
+answer:[2,3]
+},
+
+{
+id:146,
+question:"Po przeprowadzonej kontroli bezpieczeństwa przesyłki zawierające ładunek lub pocztę uważa się za zabezpieczone przed bezprawną ingerencją jeśli:",
+options:[
+"nie są pozostawione bez nadzoru i dostęp do nich mają wyłącznie osoby zaangażowane w zabezpieczenie i ładowanie ładunku",
+"pozostają tam nie dłużej niż jedną godzinę",
+"tak przewiduje program ochrony przewoźnika lotniczego"
+],
+answer:[0]
+},
+
+{
+id:147,
+question:"W szkoleniu w celu uzyskania certyfikatu operatora kontroli bezpieczeństwa może wziąć udział osoba:",
+options:[
+"co do której ustalono brak negatywnych przesłanek do wykonywania kontroli bezpieczeństwa",
+"która ukończyła szkolenie świadomości ochrony lotnictwa cywilnego",
+"potrafiąca nawiązać kontakt w języku obcym"
+],
+answer:[0]
+},
+
+{
+id:148,
+question:"Wskaż kategorie pasażerów zwolnionych z kontroli bezpieczeństwa:",
+options:[
+"osoby konwojowane pod uzbrojoną eskortą",
+"personel misji dyplomatycznych",
+"wicemarszałkowie Senatu",
+"żołnierze Żandarmerii Wojskowej wykonujący czynności związane z ochroną ministra obrony narodowej"
+],
+answer:[2,3]
+},
+
+{
+id:149,
+question:"Po dostarczeniu do strefy operacyjnej płynów i żeli zabezpieczonych w sposób umożliwiający stwierdzenie naruszenia:",
+options:[
+"poddaje się je kontroli bezpieczeństwa za pomocą urządzenia rentgenowskiego",
+"poddaje się je kontroli ETD",
+"przeprowadza się kontrolę wzrokową"
+],
+answer:[0,2]
+},
+
+{
+id:150,
+question:"Osoby posiadające uprawnienia operatora kontroli bezpieczeństwa podlegają ponownej certyfikacji:",
+options:[
+"co roku",
+"co najmniej co 2 lata",
+"co najmniej co 3 lata",
+"co najmniej co 5 lat"
+],
+answer:[2]
+},
+{
+id:151,
+question:"Bramka do wykrywania metali:",
+options:[
+"jest jedyną metodą kontroli bezpieczeństwa osób",
+"posiada wskaźnik wizualny sygnalizujący działanie",
+"w przypadku wykrycia metalu wysyła sygnał optyczny i dźwiękowy",
+"wykrywa metal do wysokości 150 cm"
+],
+answer:[1,2]
+},
+
+{
+id:152,
+question:"Sygnał optyczny bramki do wykrywania metali:",
+options:[
+"jest taki sam we wszystkich przypadkach wykrycia",
+"może być wyłączony jeśli przeszkadza podróżnym",
+"wskazuje siłę sygnału wykrycia"
+],
+answer:[0]
+},
+
+{
+id:153,
+question:"Ręczny wykrywacz metali:",
+options:[
+"jest pomocny w wykrywaniu materiałów wybuchowych",
+"jest metodą pomocniczą kontroli bagażu kabinowego",
+"wykrywa przedmioty metalowe żelazne i nieżelazne",
+"wysyła sygnał dźwiękowy przy wykryciu"
+],
+answer:[2,3]
+},
+
+{
+id:154,
+question:"System wykrywania materiałów wybuchowych wysyła sygnał alarmowy:",
+options:[
+"w przypadku wykrycia materiału wybuchowego",
+"w przypadku wykrycia przedmiotów metalowych",
+"w przypadku wykrycia przedmiotu utrudniającego wykrycie materiału wybuchowego"
+],
+answer:[0,2]
+},
+
+{
+id:155,
+question:"Kontrolę bezpieczeństwa wykonują osoby:",
+options:[
+"które ukończyły 21 lat",
+"które nie ukończyły 60 lat",
+"posiadające certyfikat operatora kontroli bezpieczeństwa",
+"wpisane na listę operatorów kontroli bezpieczeństwa"
+],
+answer:[2,3]
+},
+
+{
+id:156,
+question:"Warunkiem wpisu na listę operatorów kontroli bezpieczeństwa jest:",
+options:[
+"brak negatywnych przesłanek",
+"dostęp do informacji niejawnych",
+"ukończenie szkolenia specjalistycznego",
+"uzyskanie certyfikatu operatora"
+],
+answer:[0]
+},
+
+{
+id:157,
+question:"Warunkiem wpisu na listę operatorów kontroli bezpieczeństwa jest:",
+options:[
+"brak negatywnych przesłanek",
+"posiadanie karty identyfikacyjnej lotniska",
+"ukończenie szkolenia specjalistycznego",
+"ukończenie szkolenia w celu uzyskania certyfikatu"
+],
+answer:[0,3]
+},
+
+{
+id:158,
+question:"Pracownik ochrony lotniska ma prawo do:",
+options:[
+"kontroli osobistej",
+"korzystania z urządzeń technicznych",
+"niedopuszczenia do wejścia osoby bez uprawnień",
+"sprawdzania przedmiotów wnoszonych do strefy zastrzeżonej"
+],
+answer:[1,2,3]
+},
+
+{
+id:159,
+question:"Pracownik ochrony lotniska ma prawo do:",
+options:[
+"kontroli manualnej bagażu",
+"użycia psów i środków chemicznych",
+"niedopuszczenia osoby bez uprawnień",
+"neutralizacji urządzenia wybuchowego"
+],
+answer:[0,1,2]
+},
+
+{
+id:160,
+question:"Dodatkowe środki ochrony w sytuacji kryzysowej może wprowadzić:",
+options:[
+"Komendant Główny Policji",
+"Minister Transportu",
+"Prezes Urzędu Lotnictwa Cywilnego",
+"Szef ABW",
+"Zarządzający lotniskiem"
+],
+answer:[2]
+},
+{
+id:161,
+question:"Zadania ochrony są realizowane zgodnie z:",
+options:[
+"programami ochrony lotnisk",
+"ustawą o Policji",
+"ustawą o Straży Granicznej",
+"zarządzeniami Rady Ochrony Lotnictwa Cywilnego"
+],
+answer:[0]
+},
+
+{
+id:162,
+question:"Strefy zastrzeżone lotniska wyznacza:",
+options:[
+"komendant Policji",
+"komendant Straży Granicznej",
+"Prezes ULC",
+"zarządzający lotniskiem"
+],
+answer:[3]
+},
+
+{
+id:163,
+question:"Służbami ochrony na lotnisku są:",
+options:[
+"Policja, ABW, SOL",
+"Policja, Służba Celna, SOL",
+"Policja, Straż Graniczna, ABW, SOL",
+"wyłącznie SOL"
+],
+answer:[2]
+},
+
+{
+id:164,
+question:"Służbami ochrony na lotnisku są:",
+options:[
+"Służba Ochrony Państwa",
+"Służba Celna",
+"Służba Wywiadu Wojskowego",
+"specjalistyczna uzbrojona formacja ochronna",
+"Straż Graniczna",
+"Żandarmeria Wojskowa"
+],
+answer:[3,4,5]
+},
+
+{
+id:165,
+question:"Na lotniskach z przejściem granicznym formalności broni dokonuje:",
+options:[
+"Policja",
+"przewoźnik lotniczy",
+"Służba Celna",
+"formacja ochronna"
+],
+answer:[2]
+},
+
+{
+id:166,
+question:"Na lotniskach bez przejścia granicznego formalności broni dokonuje:",
+options:[
+"Policja",
+"specjalistyczna uzbrojona formacja ochronna",
+"Straż Graniczna",
+"wewnętrzna służba ochrony lotniska"
+],
+answer:[3]
+},
+
+{
+id:167,
+question:"Ładunek i poczta poddawane są kontroli bezpieczeństwa przy użyciu:",
+options:[
+"kontroli wzrokowej",
+"sprawdzenia nadawcy",
+"systemów wykrywania urządzeń wybuchowych",
+"urządzeń wykrywania śladów materiałów wybuchowych",
+"urządzeń rentgenowskich"
+],
+answer:[2,3,4]
+},
+
+{
+id:168,
+question:"Przedmioty zabronione w przesyłkach zawierających ładunek i pocztę:",
+options:[
+"broń przewożona zgodnie z zasadami",
+"wiertarki",
+"repliki broni",
+"zmontowane urządzenia wybuchowe"
+],
+answer:[3]
+},
+
+{
+id:169,
+question:"Przedmioty zabronione w zaopatrzeniu portu lotniczego:",
+options:[
+"aerozole odstraszające zwierzęta",
+"farby drogowe powyżej 10l",
+"masy bitumiczne powyżej 20l",
+"pałki paralizujące",
+"pistolety startowe",
+"spirytus salicylowy"
+],
+answer:[0,3,4]
+},
+
+{
+id:170,
+question:"Przedmioty zabronione w zaopatrzeniu pokładowym:",
+options:[
+"latarki akumulatorowe",
+"metalowe pojemniki na lód",
+"pistolety sygnałowe",
+"tasery"
+],
+answer:[2,3]
+},
+
+{
+id:171,
+question:"Osoby niebędące pasażerami poddaje się kontroli bezpieczeństwa za pomocą:",
+options:[
+"kontroli wzrokowej",
+"ręcznego wykrywacza metali",
+"ETD + ręczny wykrywacz metali",
+"ETD"
+],
+answer:[2,3]
+},
+
+{
+id:172,
+question:"Czasowa karta identyfikacyjna portu lotniczego zawiera:",
+options:[
+"datę wydania",
+"nazwisko funkcjonariusza",
+"numer służbowy",
+"oznaczenie stref dostępu",
+"zdjęcie posiadacza"
+],
+answer:[2,3,4]
+},
+
+{
+id:173,
+question:"Przedmioty zabronione w zaopatrzeniu portu lotniczego:",
+options:[
+"aerozole odstraszające zwierzęta",
+"farby drogowe powyżej 5l",
+"masy bitumiczne powyżej 20l",
+"olej silnikowy",
+"pałki paralizujące",
+"pistolety startowe"
+],
+answer:[0,4,5]
+},
+
+{
+id:174,
+question:"Przedmioty zabronione w poczcie przewoźnika lotniczego:",
+options:[
+"broń pneumatyczna",
+"gazy pieprzowe",
+"kastety",
+"latarki sygnalizacyjne",
+"noże ostrze 6cm",
+"nożyczki 7cm"
+],
+answer:[0,1,2]
+},
+
+{
+id:175,
+question:"Przedmioty zabronione w poczcie przewoźnika lotniczego:",
+options:[
+"broń pneumatyczna",
+"gazy pieprzowe",
+"kastety",
+"noże poniżej 6cm",
+"nożyczki 6cm",
+"piłki tenisowe"
+],
+answer:[0,1,2]
+},
+
+{
+id:176,
+question:"Po kontroli bezpieczeństwa przesyłki uważa się za zabezpieczone jeśli:",
+options:[
+"nie są pozostawione bez nadzoru",
+"pozostają tam nie dłużej niż godzinę",
+"tak przewiduje program ochrony"
+],
+answer:[0]
+},
+
+{
+id:177,
+question:"Jeżeli operator kontroli bezpieczeństwa nie ma pewności:",
+options:[
+"artykuł odrzuca się lub poddaje ponownej kontroli",
+"decyzję podejmuje zarządzający lotniskiem",
+"artykuł można dopuścić do strefy"
+],
+answer:[0]
+},
+];
+
+
+
+// ======================
+// VARIABLES
+// ======================
+
+let pool=[];
+let index=0;
+let score=0;
+let answered=false;
+let wrongQuestions=[];
+let timer;
+let time=0;
+
+// ======================
+// MODES
+// ======================
+
+function startStudy(){
+
+stopTimer();
+
+pool=[...questions].sort(()=>Math.random()-0.5);
+
+index=0;
+score=0;
+
+render();
+
+}
+function prevQuestion(){
+
+if(index>0){
+
+index--;
+
+render();
+
+}
+
+}
+
+
+function startExam(){
+
+pool=[...questions].sort(()=>Math.random()-0.5).slice(0,40);
+
+index=0;
+score=0;
+
+startTimer();
+
+render();
+
+}
+function startPractice(){
+
+pool=[...wrongQuestions];
+
+index=0;
+score=0;
+
+render();
+
+}
+
+// ======================
+// RENDER
+// ======================
+
+function render(){
+
+answered=false;
+
+const q=pool[index];
+
+if(!q){
+
+finish();
+
+return;
+
+}
+
+document.getElementById("question").innerText=q.question;
+
+const optionsDiv=document.getElementById("options");
+
+optionsDiv.innerHTML="";
+
+q.options.forEach((opt,i)=>{
+
+const label=document.createElement("label");
+
+label.className="option";
+
+const box=document.createElement("input");
+
+box.type="checkbox";
+
+box.value=i;
+
+label.appendChild(box);
+
+label.appendChild(document.createTextNode(" "+opt));
+
+optionsDiv.appendChild(label);
+
+});
+
+updateHeader();
+
+}
+
+// ======================
+// ANSWER
+// ======================
+function submitAnswer(){
+
+if(answered) return;
+
+const q=pool[index];
+
+const checked=[...document.querySelectorAll("input:checked")]
+.map(e=>parseInt(e.value))
+.sort();
+
+const correct=[...q.answer].sort();
+
+const result=document.getElementById("result");
+
+if(JSON.stringify(checked)===JSON.stringify(correct)){
+
+score++;
+result.innerText="Correct";
+result.style.color="green";
+
+}else{
+
+wrongQuestions.push(q);
+
+result.innerText="Incorrect";
+result.style.color="red";
+
+}
+
+answered=true;
+
+updateHeader();
+
+}
+
+
+// ======================
+// NAVIGATION
+// ======================
+
+function nextQuestion(){
+
+index++;
+
+render();
+
+}
+
+// ======================
+// HEADER
+// ======================
+
+function updateHeader(){
+
+document.getElementById("progress").innerText=(index+1)+" / "+pool.length;
+
+document.getElementById("score").innerText="Score "+score;
+
+}
+
+// ======================
+// FINISH
+// ======================
+
+function finish(){
+
+stopTimer();
+
+const percent=Math.round(score/pool.length*100);
+
+document.getElementById("app").innerHTML=
+"<h2>Exam finished</h2>"+
+"<h3>"+score+" / "+pool.length+"</h3>"+
+"<h3>"+percent+"%</h3>"+
+"<button onclick='location.reload()'>Restart</button>";
+
+}
+
+// ======================
+// TIMER
+// ======================
+
+function startTimer(){
+
+stopTimer();
+
+time=0;
+
+timer=setInterval(()=>{
+
+time++;
+
+const m=Math.floor(time/60);
+
+const s=time%60;
+
+document.getElementById("timer").innerText=m+":"+String(s).padStart(2,"0");
+
+},1000);
+
+}
+
+function stopTimer(){
+
+clearInterval(timer);
+
+document.getElementById("timer").innerText="";
+
+}
+if('serviceWorker' in navigator){
+
+const code=`
+self.addEventListener('install',e=>self.skipWaiting());
+self.addEventListener('fetch',()=>{});
+`;
+
+const blob=new Blob([code],{type:'text/javascript'});
+
+navigator.serviceWorker.register(URL.createObjectURL(blob));
+
+}
+</script>
+<script>
+    if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js");
+    });
+    }
+</script>
+
+</body>
+</html>
