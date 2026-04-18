@@ -1,6 +1,9 @@
 let questions = [];
 let currentQuestion = 0;
 let score = 0;
+function finishQuiz() {
+  localStorage.setItem("lastScore", score);
+}
 
 // Load JSON
 fetch("questions.json")
@@ -59,10 +62,33 @@ function showResult() {
     <button onclick="restartQuiz()">Restart</button>
   `;
 }
+const name = prompt("Enter your name:");
 
+fetch("https://okbfull.onrender.com/api/score", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({ name, score })
+});
+fetch("https://okbfull.onrender.com/api/leaderboard")
+  .then(res => res.json())
+  .then(data => {
+    const list = document.getElementById("leaderboard");
+
+    data.slice(0, 5).forEach(item => {
+      const li = document.createElement("li");
+      li.innerText = `${item.name}: ${item.score}`;
+      list.appendChild(li);
+    });
+  });
 // Restart quiz
 function restartQuiz() {
   currentQuestion = 0;
   score = 0;
   showQuestion();
+}
+const saved = localStorage.getItem("lastScore");
+if (saved) {
+  document.getElementById("score").innerText = "Last score: " + saved;
 }
