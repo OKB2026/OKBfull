@@ -1,136 +1,228 @@
-let questions = [];
-let currentQuestion = 0;
-let score = 0;
-function finishQuiz() {
-  localStorage.setItem("lastScore", score);
-}
+console.log("SCRIPT LOADED");
 
-// Load JSON
-fetch("questions.json")
-  .then(res => res.json())
-  .then(data => {
-    questions = data;
-    showQuestion();
-  })
-  .catch(err => console.error("Error loading JSON:", err));
-
-// Show question
-function showQuestion() {
-  const q = questions[currentQuestion];
-
-  const container = document.getElementById("quiz");
-
-  container.innerHTML = `
-    <h2>Question ${currentQuestion + 1}</h2>
-    <p>${q.question}</p>
-    <div id="answers">
-      ${q.options
-        .map(
-          (opt, index) =>
-            `<button onclick="selectAnswer(${index})">${opt}</button>`
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-// Handle answer click
-function selectAnswer(index) {
-  const q = questions[currentQuestion];
-
-  // Check if selected index is correct
-  if (q.answer.includes(index)) {
-    score++;
-  }
-
-  currentQuestion++;
-
-  if (currentQuestion < questions.length) {
-    showQuestion();
-  } else {
-    showResult();
-  }
-}
-
-// Show final result
-async function showResult() {
-  const container = document.getElementById("quiz");
-
-  container.innerHTML = `
-    <h2>Finished!</h2>
-    <p>Your score: ${score} / ${questions.length}</p>
-    <button onclick="restartQuiz()">Restart</button>
-  `;
-
-  localStorage.setItem("lastScore", score);
-
-  const { data } = await supabaseClient.auth.getUser();
-
-  let name = "Anonymous";
-
-  if (data.user) {
-    name = data.user.email; // auto use email
-  } else {
-    name = (prompt("Enter your name:") || "").trim() || "Anonymous";
-  }
-
-  saveScore(name, score);
-  loadLeaderboard();
-}
-
-  
-  // ✅ create Supabase client (correct way)
+// ======================
+// SUPABASE
+// ======================
 const supabaseClient = supabase.createClient(
   "https://jhrrnseoixdyxyhknsyk.supabase.co",
   "sb_publishable_qQ5lJfA2poQ6vo0q9YrQ5Q_o6PK3Kes"
 );
 
+// ======================
+// VARIABLES
+// ======================
+let questions = [];
+let pool = [];
+let index = 0;
+let score = 0;
+let answered = false;
+let wrongQuestions = JSON.parse(localStorage.getItem("wrongQuestions")) || [];
 
+let userAnswers = [];
+let timer;
+let time = 0;
+let isExamMode = false;
 
-// ✅ load leaderboard
-async function loadLeaderboard() {
-  const { data, error } = await supabaseClient
-    .from("scores")
-    .select("*")
-    .order("score", { ascending: false })
-    .limit(5);
-
-  if (error) return console.error(error);
-
-  const list = document.getElementById("leaderboard");
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  data.forEach(item => {
-    const li = document.createElement("li");
-    li.innerText = `${item.name}: ${item.score}`;
-    list.appendChild(li);
+// ======================
+// LOAD QUESTIONS
+// ======================
+fetch("https://okbfull.onrender.com/api/questions")
+  .then(res => res.json())
+  .then(data => {
+    questions = data;
+    buildTopics();
   });
+
+// ======================
+// MODES
+// ======================
+function startStudy() {
+  isExamMode = false;
+  pool = [...questions].sort(() => Math.random() - 0.5);
+  startGame();
 }
-// SIGN UP
-async function signUp() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
 
-  const { error } = await supabaseClient.auth.signUp({
-    email,
-    password,
+function startExam() {
+  isExamMode = true;
+  pool = [...questions].sort(() => Math.random() - 0.5).slice(0, 40);
+  startTimer();
+  startGame();
+}
+
+function startPractice() {
+  if (wrongQuestions.length === 0) {
+    alert("No mistakes yet 👍");
+    return;
+  }
+
+  pool = questions.filter(q => wrongQuestions.includes(String(q.id)));
+  startGame();
+}
+
+function startGame() {
+  document.getElementById("menuPage").style.display = "none";
+  document.getElementById("quizPage").style.display = "block";
+
+  index = 0;
+  score = 0;
+  answered = false;
+  userAnswers = new Array(pool.length).fill(null);
+
+  render();
+}
+
+// ======================
+// RENDER
+// ======================
+function render() {
+  const q = pool[index];
+  if (!q) return finish();
+
+  document.getElementById("question").innerText = q.question;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  q.options.forEach((opt, i) => {
+    const label = document.createElement("label");
+    label.className = "option";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = i;
+
+    input.onchange = () => {
+      let checked = [...document.querySelectorAll("#options input:checked")]
+        .map(e => parseInt(e.value));
+
+      userAnswers[index] = checked;
+    };
+
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(" " + opt));
+    optionsDiv.appendChild(label);
   });
+
+  updateHeader();
+}
+
+// ======================
+// ANSWER
+// ======================
+function submitAnswer() {
+  if (answered) return;
+
+  const q = pool[index];
+
+  const checked = [...document.querySelectorAll("#options input:checked")]
+    .map(e => parseInt(e.value))
+    .sort();
+
+  const correct = [...q.answer].sort();
+
+  if (JSON.stringify(checked) === JSON.stringify(correct)) {
+    score++;
+    alert("Correct!");
+  } else {
+    alert("Wrong!");
+
+    if (!wrongQuestions.includes(String(q.id))) {
+      wrongQuestions.push(String(q.id));
+      localStorage.setItem("wrongQuestions", JSON.stringify(wrongQuestions));
+    }
+  }
+
+  answered = true;
+  updateHeader();
+}
+
+// ======================
+// NAVIGATION
+// ======================
+function nextQuestion() {
+  if (!answered) return alert("Answer first!");
+
+  answered = false;
+  index++;
+
+  if (index < pool.length) render();
+  else finish();
+}
+
+function prevQuestion() {
+  if (index > 0) {
+    index--;
+    answered = false;
+    render();
+  }
+}
+
+// ======================
+// HEADER
+// ======================
+function updateHeader() {
+  document.getElementById("progress").innerText =
+    (index + 1) + " / " + pool.length;
+
+  document.getElementById("score").innerText =
+    "Score: " + score;
+}
+
+// ======================
+// FINISH
+// ======================
+async function finish() {
+  stopTimer();
+
+  document.getElementById("quizPage").innerHTML = `
+    <h2>Finished!</h2>
+    <p>${score} / ${pool.length}</p>
+    <button onclick="location.reload()">Restart</button>
+  `;
+
+  const { data } = await supabaseClient.auth.getUser();
+
+  let name = data.user ? data.user.email : prompt("Enter name") || "Anonymous";
+
+  await saveScore(name, score);
+  loadLeaderboard();
+}
+
+// ======================
+// TIMER
+// ======================
+function startTimer() {
+  time = 0;
+  timer = setInterval(() => {
+    time++;
+    document.getElementById("timer").innerText =
+      Math.floor(time / 60) + ":" + (time % 60).toString().padStart(2, "0");
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timer);
+  document.getElementById("timer").innerText = "";
+}
+
+// ======================
+// AUTH
+// ======================
+async function signUp() {
+  const email = emailInput();
+  const password = passwordInput();
+
+  const { error } = await supabaseClient.auth.signUp({ email, password });
 
   if (error) alert(error.message);
-  else alert("Check your email to confirm!");
+  else alert("Check email!");
 }
 
-// LOGIN
 async function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = emailInput();
+  const password = passwordInput();
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
   if (error) alert(error.message);
   else {
@@ -139,53 +231,78 @@ async function login() {
   }
 }
 
-// LOGOUT
 async function logout() {
   await supabaseClient.auth.signOut();
   checkUser();
 }
+
 async function checkUser() {
   const { data } = await supabaseClient.auth.getUser();
-
-  const status = document.getElementById("userStatus");
-
-  if (data.user) {
-    status.innerText = "Logged in as: " + data.user.email;
-  } else {
-    status.innerText = "Not logged in";
-  }
+  document.getElementById("userStatus").innerText =
+    data.user ? "Logged in as: " + data.user.email : "Not logged in";
 }
+
 checkUser();
-// ✅ save score
-async function saveScore(name, score) {
-  const { data: userData } = await supabaseClient.auth.getUser();
 
-  if (!userData.user) {
-    alert("Please login first!");
-    return;
-  }
+// ======================
+// HELPERS
+// ======================
+function emailInput() {
+  return document.getElementById("email").value;
+}
 
-  const { error } = await supabaseClient
+function passwordInput() {
+  return document.getElementById("password").value;
+}
+
+// ======================
+// LEADERBOARD
+// ======================
+async function loadLeaderboard() {
+  const { data } = await supabaseClient
     .from("scores")
-    .insert([
-      {
-        name,
-        score,
-        user_id: userData.user.id,
-      },
-    ]);
+    .select("*")
+    .order("score", { ascending: false })
+    .limit(5);
 
-  if (error) console.error(error);
+  const list = document.getElementById("leaderboard");
+  if (!list) return;
+
+  list.innerHTML = "";
+  data.forEach(item => {
+    const li = document.createElement("li");
+    li.innerText = `${item.name}: ${item.score}`;
+    list.appendChild(li);
+  });
 }
 
-// Restart quiz
-function restartQuiz() {
-  currentQuestion = 0;
-  score = 0;
-  showQuestion();
-}
-const saved = localStorage.getItem("lastScore");
-if (saved) {
-  document.getElementById("score").innerText = "Last score: " + saved;
-}
 loadLeaderboard();
+
+// ======================
+// TOPICS
+// ======================
+function buildTopics() {
+  const topicsDiv = document.getElementById("topics");
+  topicsDiv.innerHTML = "";
+
+  ["CBS","HBS","MAIL","CARGO","SUPPLY","PERSONS"].forEach(topic => {
+    const btn = document.createElement("button");
+    btn.innerText = topic;
+    btn.onclick = () => loadTopic(topic);
+    topicsDiv.appendChild(btn);
+  });
+}
+
+function loadTopic(topic) {
+  pool = questions.filter(q => (q.topic || "").includes(topic));
+  startGame();
+}
+
+// ======================
+// RESET MISTAKES
+// ======================
+function resetMistakes() {
+  localStorage.removeItem("wrongQuestions");
+  wrongQuestions = [];
+  alert("Cleared 👍");
+}
