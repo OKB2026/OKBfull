@@ -53,7 +53,7 @@ function selectAnswer(index) {
 }
 
 // Show final result
-function showResult() {
+async function showResult() {
   const container = document.getElementById("quiz");
 
   container.innerHTML = `
@@ -61,27 +61,123 @@ function showResult() {
     <p>Your score: ${score} / ${questions.length}</p>
     <button onclick="restartQuiz()">Restart</button>
   `;
+
+  localStorage.setItem("lastScore", score);
+
+  const { data } = await supabaseClient.auth.getUser();
+
+  let name = "Anonymous";
+
+  if (data.user) {
+    name = data.user.email; // auto use email
+  } else {
+    name = (prompt("Enter your name:") || "").trim() || "Anonymous";
+  }
+
+  saveScore(name, score);
+  loadLeaderboard();
 }
-const name = prompt("Enter your name:");
 
-fetch("https://okbfull.onrender.com/api/score", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({ name, score })
-});
-fetch("https://okbfull.onrender.com/api/leaderboard")
-  .then(res => res.json())
-  .then(data => {
-    const list = document.getElementById("leaderboard");
+  
+  // ✅ create Supabase client (correct way)
+const supabaseClient = supabase.createClient(
+  "https://jhrrnseoixdyxyhknsyk.supabase.co",
+  "sb_publishable_qQ5lJfA2poQ6vo0q9YrQ5Q_o6PK3Kes"
+);
 
-    data.slice(0, 5).forEach(item => {
-      const li = document.createElement("li");
-      li.innerText = `${item.name}: ${item.score}`;
-      list.appendChild(li);
-    });
+
+
+// ✅ load leaderboard
+async function loadLeaderboard() {
+  const { data, error } = await supabaseClient
+    .from("scores")
+    .select("*")
+    .order("score", { ascending: false })
+    .limit(5);
+
+  if (error) return console.error(error);
+
+  const list = document.getElementById("leaderboard");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  data.forEach(item => {
+    const li = document.createElement("li");
+    li.innerText = `${item.name}: ${item.score}`;
+    list.appendChild(li);
   });
+}
+// SIGN UP
+async function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) alert(error.message);
+  else alert("Check your email to confirm!");
+}
+
+// LOGIN
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) alert(error.message);
+  else {
+    alert("Logged in!");
+    checkUser();
+  }
+}
+
+// LOGOUT
+async function logout() {
+  await supabaseClient.auth.signOut();
+  checkUser();
+}
+async function checkUser() {
+  const { data } = await supabaseClient.auth.getUser();
+
+  const status = document.getElementById("userStatus");
+
+  if (data.user) {
+    status.innerText = "Logged in as: " + data.user.email;
+  } else {
+    status.innerText = "Not logged in";
+  }
+}
+checkUser();
+// ✅ save score
+async function saveScore(name, score) {
+  const { data: userData } = await supabaseClient.auth.getUser();
+
+  if (!userData.user) {
+    alert("Please login first!");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("scores")
+    .insert([
+      {
+        name,
+        score,
+        user_id: userData.user.id,
+      },
+    ]);
+
+  if (error) console.error(error);
+}
+
 // Restart quiz
 function restartQuiz() {
   currentQuestion = 0;
@@ -92,3 +188,4 @@ const saved = localStorage.getItem("lastScore");
 if (saved) {
   document.getElementById("score").innerText = "Last score: " + saved;
 }
+loadLeaderboard();

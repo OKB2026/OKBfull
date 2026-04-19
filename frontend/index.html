@@ -289,6 +289,16 @@ box-shadow:0 8px 18px rgba(0,0,0,0.12);
 <body>
     <!-- nawigacja strony-->
     <div id="app">
+        <div id="auth">
+            <input id="email" placeholder="Email" />
+            <input id="password" type="password" placeholder="Password" />
+          
+            <button onclick="signUp()">Sign Up</button>
+            <button onclick="login()">Login</button>
+            <button onclick="logout()">Logout</button>
+          
+            <p id="userStatus"></p>
+          </div>
 
         <!-- ✅ MENU PAGE -->
         <div id="menuPage">
@@ -861,6 +871,8 @@ function resetMistakes(){
     });
     }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="script.js"></script>
 <div id="watermark">OKB Trainer ©Eliza Kwiatkowska</div>
 </body>
 </html>
