@@ -1,5 +1,5 @@
 console.log("TOP");
-console.log("VERSION 2 LOADED 🚀");
+console.log("SCRIPT LOADED");
 
 // ======================
 // SUPABASE
