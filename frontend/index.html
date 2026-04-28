@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKB Quiz Trainer</title>
+<style>
+    /* styl strony */
+body{
+margin:0;
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+background:#0f172a;
+color:black;
+transition:0.3s;
+font-family:system-ui;
+}
+
+#app{
+position:relative;
+width:100%;
+max-width:600px;
+background:white;
+padding:20px;
+border-radius:16px;
+box-shadow:0 10px 40px rgba(0,0,0,0.3);
+padding-bottom:160px; /* 👈 increased */
+}
+
+
+button{
+padding:10px;
+margin:5px 0;
+width:100%;
+border:none;
+border-radius:8px;
+background:#2563eb;
+color:white;
+font-size:16px;
+}
+
+.option{
+display:block;
+margin:8px 0;
+}
+
+#top{
+display:flex;
+justify-content:space-between;
+margin-bottom:10px;
+font-weight:bold;
+}
+
+
+
+#progressContainer{
+width:100%;
+height:10px;
+background:#e5e7eb;
+border-radius:10px;
+margin-bottom:20px;
+overflow:hidden;
+}
+
+#progressBar{
+height:100%;
+width:0%;
+background:#2563eb;
+transition:0.3s;
+}
+#topics{
+position:relative;
+z-index:2;
+}
+
+#topics button{
+padding:8px 14px;
+border:none;
+border-radius:10px;
+background:#2563eb;
+color:white;
+font-size:14px;
+cursor:pointer;
+}
+
+#topics button:hover{
+background:#1d4ed8;
+}
+#bottomNav{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+display:flex;
+justify-content:space-around;
+background:#111827;
+padding:12px;
+box-shadow:0 -5px 20px rgba(0,0,0,0.3);
+}
+
+#navigator{
+display:grid;
+grid-template-columns:repeat(10,1fr);
+gap:4px;
+margin-bottom:15px;
+max-height:150px;
+overflow-y:auto;
+}
+
+.navBtn{
+padding:8px;
+font-size:13px;
+border:none;
+border-radius:8px;
+
+background:#f1f5f9;   /* soft light */
+color:#1e293b;
+
+cursor:pointer;
+
+transition:all 0.2s ease;
+}
+
+/* hover */
+.navBtn:hover{
+background:#e2e8f0;
+transform:scale(1.05);
+}
+
+/* active question */
+.navBtn.active{
+outline:2px solid #2563eb;
+background:#dbeafe;
+}
+
+/* answered (but not graded) */
+.navBtn.answered:not(.correct):not(.wrong){
+background:#93c5fd;
+color:#0f172a;
+}
+
+/* correct */
+.navBtn.correct{
+background:#22c55e;
+color:white;
+}
+
+/* wrong */
+.navBtn.wrong{
+background:#ef4444;
+color:white;
+}
+#darkToggle{
+position:absolute;
+top:10px;
+right:10px;
+width:40px;
+height:40px;
+font-size:18px;
+border-radius:50%;
+border:none;
+background:#111827;
+color:white;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:0;
+}
+.dark{
+background:#0f172a;
+color:white;
+}
+
+.dark #app{
+background:#1e293b;
+color:white;
+}
+
+.dark button{
+background:#334155;
+color:white;
+}
+
+.dark .option{
+background:#1e293b;
+}
+
+.dark #bottomNav{
+background:#020617;
+}
+
+.dark #progressContainer{
+background:#334155;
+}
+
+.dark #progressBar{
+background:#38bdf8;
+}
+.navBtn.answered{
+background:#3b82f6;
+color:white;
+}
+.dark .navBtn{
+background:#334155;
+color:white;
+}
+
+.dark .navBtn:hover{
+background:#475569;
+}
+
+.dark .navBtn.active{
+background:#1d4ed8;
+}
+
+.dark .navBtn.answered:not(.correct):not(.wrong){
+background:#3b82f6;
+}
+.option{
+display:flex;
+align-items:center;
+padding:14px 16px;
+margin:12px 0;
+
+background:#334155;
+color:white;
+
+border-radius:14px;
+cursor:pointer;
+
+/* ✨ SHADOW MAGIC */
+box-shadow:0 4px 12px rgba(0,0,0,0.25);
+
+transition:all 0.2s ease;
+}
+
+.option:hover{
+transform:translateY(-2px);
+box-shadow:0 8px 20px rgba(0,0,0,0.35);
+}
+
+.option input{
+margin-right:10px;
+transform:scale(1.2);
+}
+.option.selected{
+background:#3b82f6;
+box-shadow:0 6px 18px rgba(59,130,246,0.5);
+}
+.option.correct{
+background:#22c55e;
+box-shadow:0 6px 18px rgba(34,197,94,0.5);
+}
+
+.option.wrong{
+background:#ef4444;
+box-shadow:0 6px 18px rgba(239,68,68,0.5);
+}
+body:not(.dark) .option{
+background:#f8fafc;
+color:#0f172a;
+
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+body:not(.dark) .option:hover{
+box-shadow:0 8px 18px rgba(0,0,0,0.12);
+}
+#watermark{
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    opacity: 0.15;
+    font-size: 14px;
+    pointer-events: none;
+    user-select: none;
+}
+</style>
+</head>
+
+<body>
+    <!-- nawigacja strony-->
+    <div id="app">
+        <div id="auth">
+            <input id="email" placeholder="Email" />
+            <input id="password" type="password" placeholder="Password" />
+          
+            <button onclick="signUp()">Sign Up</button>
+            <button onclick="login()">Login</button>
+            <button onclick="logout()">Logout</button>
+          
+            <p id="userStatus"></p>
+          </div>
+
+        <!-- ✅ MENU PAGE -->
+        <div id="menuPage">
+        
+        <h2>OKB Pytania i egzamin próbny</h2>
+        
+        <button onclick="startPractice()">❌ Trenuj błedne odpowiedzi</button>
+        <button onclick="startStudy()">📚 Tryb nauki</button>
+        <button onclick="startExam()">🎯 Exam Mode (40)</button>
+        <button onclick="resetMistakes()">🧹 Resetuj błędy</button>
+        
+        <div id="topics"></div>
+        
+        </div>
+        
+        
+        <!-- ✅ QUIZ PAGE -->
+        <div id="quizPage" style="display:none;">
+        
+        <div id="top">
+        <div id="progress"></div>
+        <div id="score"></div>
+        <div id="timer"></div>
+        </div>
+        
+        <div id="topicStats"></div>
+        <div id="navigator"></div>
+        
+        <div id="question"></div>
+        <div id="options"></div>
+        
+        <div id="bottomNav">
+            <button onclick="prevQuestion()">⬅️</button>
+            <button onclick="submitAnswer()">✅</button>
+            <button onclick="goHome()">🏠</button>
+            <button onclick="nextQuestion()">➡️</button>
+        </div>
+        
+        <div id="result"></div>
+        
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+        </div>
+        
+        </div>
+        
+        <!-- stays global -->
+        <button id="darkToggle" onclick="toggleDarkMode()">🌙</button>
+        <div id="lastScore"></div>
+        <h3>Leaderboard</h3>
+<ul id="leaderboard"></ul>
+        </div>
+        
+<script>
+    if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+    //navigator.serviceWorker.register("service-worker.js");
+    });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="script.js"></script>
+<div id="watermark">OKB Trainer ©Eliza Kwiatkowska</div>
+</body>
+</html>
